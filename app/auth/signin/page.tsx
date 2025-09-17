@@ -252,25 +252,55 @@
 //     </div>
 //   );
 // }
+
+
+
+// import { redirect } from "next/navigation";
+// // import Link from "next/link";
+// // import AuthAction from "@/components/ui/AuthAction";
+// import { getSessionServer } from "@/lib/auth";
+// import SignInClient from "./SignInClient";
+
+// export default async function Page({ searchParams }: { searchParams?: { callbackUrl?: string } }) {
+//   const session = await getSessionServer();
+//   if (session?.user) {
+//     const cb = searchParams?.callbackUrl;
+//     const safeCb = cb && cb.startsWith("/") ? cb : "/designer/dashboard";
+//     redirect(safeCb);
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-black text-white flex flex-col">
+//       {/* Header with AuthAction (Sign in hidden if logged) */}
+
+//       {/* Body (client) */}
+//       <SignInClient />
+//     </div>
+//   );
+// }
+
+
+// app/auth/signin/page.tsx
 import { redirect } from "next/navigation";
-// import Link from "next/link";
-// import AuthAction from "@/components/ui/AuthAction";
 import { getSessionServer } from "@/lib/auth";
 import SignInClient from "./SignInClient";
 
-export default async function Page({ searchParams }: { searchParams?: { callbackUrl?: string } }) {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl } = await searchParams;
+
   const session = await getSessionServer();
   if (session?.user) {
-    const cb = searchParams?.callbackUrl;
+    const cb = callbackUrl;
     const safeCb = cb && cb.startsWith("/") ? cb : "/designer/dashboard";
     redirect(safeCb);
   }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header with AuthAction (Sign in hidden if logged) */}
-
-      {/* Body (client) */}
       <SignInClient />
     </div>
   );
