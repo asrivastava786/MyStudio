@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { generateResetToken } from "@/lib/token";
 import { sendPasswordResetEmail } from "@/lib/mailer";
 
-
+export const runtime = "edge"; //issue with cloudflare pages
 export async function POST(req: Request) {
     try {
         const { email } = await req.json();

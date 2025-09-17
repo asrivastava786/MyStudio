@@ -3,6 +3,8 @@ import { shopifyGraphQL } from "@/lib/shopify";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 /*
 Query last N orders (paginated) and filter line items by product tag/metafield.
 For production: use date range params (?from=YYYY-MM-DD&to=YYYY-MM-DD) and paginate.

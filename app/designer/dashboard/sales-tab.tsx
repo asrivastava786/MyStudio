@@ -91,6 +91,8 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+
+export const runtime = "edge"; //issue with cloudflare pages
 //import { useSession } from "next-auth/react";
 
 type Row = { order: string; date: string; product: string; qty: number; unit: number; currency: string };

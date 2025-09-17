@@ -1,6 +1,8 @@
 import { getSessionServer } from "@/lib/auth";
 import Link from "next/link";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 export default async function DesignerHome() {
   const session = await getSessionServer();
   if (!session?.user) {

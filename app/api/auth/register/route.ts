@@ -4,6 +4,8 @@ import bcrypt from "bcrypt";
 import { RegisterSchema } from "@/lib/validation";
 import { sendWelcomeEmail } from "@/lib/mailer";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 export async function POST(req: NextRequest) {
   try {
     const json = await req.json();

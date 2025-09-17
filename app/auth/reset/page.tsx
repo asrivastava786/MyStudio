@@ -127,6 +127,8 @@
 //   );
 // }
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 import ResetClient from "./resetclient";
 
 export default async function Page({

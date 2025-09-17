@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ensureCloudinaryFolder } from "@/lib/cloudinary-folder-check";
 
-
+export const runtime = "edge"; //issue with cloudflare pages
 
 export async function POST(req: NextRequest) {
 

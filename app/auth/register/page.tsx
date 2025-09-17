@@ -192,6 +192,8 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { RegisterSchema, type RegisterInput } from "@/lib/validation";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 // Fallback schema in case RegisterSchema is missing at dev time
 const FallbackRegisterSchema = z.object({
   email: z.string().email("Podaj poprawny email"),

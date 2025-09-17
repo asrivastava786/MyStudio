@@ -75,6 +75,8 @@ import Mydesign from "./myDesign";
 import ProductDesignerClient from "./ProductDesignerClient"; // client wrapper
 import { SessionProvider } from "next-auth/react";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 export const revalidate = 0; // keep session fresh on each request
 
 export default async function Dashboard() {

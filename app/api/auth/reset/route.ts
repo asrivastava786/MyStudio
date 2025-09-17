@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 
-
+export const runtime = "edge"; //issue with cloudflare pages
 export async function POST(req: Request) {
     try {
         const { token, password } = await req.json();

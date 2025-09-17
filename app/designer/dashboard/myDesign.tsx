@@ -13,6 +13,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 export type DesignItem = {
   id: string;
   title: string;

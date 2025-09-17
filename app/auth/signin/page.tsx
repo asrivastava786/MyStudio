@@ -285,6 +285,8 @@ import { redirect } from "next/navigation";
 import { getSessionServer } from "@/lib/auth";
 import SignInClient from "./SignInClient";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 export default async function Page({
   searchParams,
 }: {

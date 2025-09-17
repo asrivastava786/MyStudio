@@ -1,6 +1,9 @@
 // app/api/sales/route.ts
 import { NextResponse } from "next/server";
 import { shopifyGraphQL } from "@/lib/shopify";
+
+export const runtime = "edge"; //issue with cloudflare pages
+
 // If you want to restrict by logged-in user, uncomment the next two lines:
 // import { getServerSession } from "next-auth";
 // import { authOptions } from "@/lib/auth.options"; // server-only

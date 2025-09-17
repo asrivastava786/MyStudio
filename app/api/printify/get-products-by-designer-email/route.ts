@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.options";
 

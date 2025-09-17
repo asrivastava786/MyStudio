@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
+export const runtime = "edge"; //issue with cloudflare pages
+
 export default function SignInClient() {
   const router = useRouter();
   const sp = useSearchParams();
