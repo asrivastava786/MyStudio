@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as bcryptjs from "bcryptjs";
 
-export const runtime = "edge"; // Cloudflare/Edge compatible
+//export const runtime = "edge"; // Cloudflare/Edge compatible
 
 // ----- tiny helpers (Edge-safe) -----
 function bytesToHex(bytes: Uint8Array): string {

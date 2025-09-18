@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useDesignerStore } from "@/lib/designerStore";
 import Pdesigner from "./productDesigner";
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 
 type CreateResult = { ok: boolean; product?: any; error?: string };
 

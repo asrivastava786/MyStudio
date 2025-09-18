@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 
 type Me = {
   id: string;

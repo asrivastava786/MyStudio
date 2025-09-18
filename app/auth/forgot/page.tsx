@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 export default function ForgotPage() {
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);

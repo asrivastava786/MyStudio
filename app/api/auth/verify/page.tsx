@@ -1,5 +1,5 @@
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 export default function Verify() {
   return (
     <main className="min-h-screen flex items-center justify-center p-6">

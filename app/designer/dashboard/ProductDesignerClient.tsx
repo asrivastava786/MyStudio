@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 
 const ProductDesigner = dynamic(() => import("./productDesigner"), {
   ssr: false,

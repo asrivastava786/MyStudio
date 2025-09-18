@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import hero from "@/assets/Zbag.jpeg";
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 
 export default function HandbagHome() {
   const [subscribed, setSubscribed] = useState(false);

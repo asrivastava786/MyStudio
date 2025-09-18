@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 
 export default async function DesignerHome() {
   //const session = await getSessionServer();

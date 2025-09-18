@@ -5,7 +5,7 @@ import { Stage, Layer, Rect, Image as KImage, Transformer } from "react-konva";
 import useImage from "use-image";
 import { useDesignerStore } from "@/lib/designerStore";
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 
 type Pos = { x: number; y: number; width: number; height: number; rotation?: number };
 

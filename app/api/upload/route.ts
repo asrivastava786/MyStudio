@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { ensureCloudinaryFolder } from "@/lib/cloudinary-folder-check";
 
-export const runtime = "edge";
+
 
 // allow common images, max 10 MB
 const ALLOWED_TYPES = new Set([

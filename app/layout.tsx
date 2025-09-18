@@ -4,7 +4,7 @@ import "./globals.css";
 import Footer from "@/components/ui/Footer";
 import Header from "@/components/ui/Header";
 
-export const runtime = "edge"; 
+//export const runtime = "edge"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

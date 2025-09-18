@@ -4,7 +4,7 @@ import { shopifyGraphQL } from "@/lib/shopify";
 // import { authOptions } from "@/lib/auth";
 import { auth } from "@/lib/auth";
 
-export const runtime = "edge"; //issue with cloudflare pages
+//export const runtime = "edge"; //issue with cloudflare pages
 
 /*
 Query last N orders (paginated) and filter line items by product tag/metafield.
