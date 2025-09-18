@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
 
         // Create token regardless (privacy)
-        const { token, tokenHash } = generateResetToken();
+       const { token, tokenHash } = await generateResetToken();
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
 
 

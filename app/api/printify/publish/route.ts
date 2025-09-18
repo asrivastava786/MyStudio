@@ -1,10 +1,12 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+// import { getServerSession } from "next-auth";
+// import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  //const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user?.id || (session.user as any).role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

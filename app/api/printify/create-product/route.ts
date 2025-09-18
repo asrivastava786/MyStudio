@@ -1,8 +1,9 @@
 // app/api/printify/create-product/route.ts
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+// import { getServerSession } from "next-auth";
+// import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 type Position = { x: number; y: number; width: number; height: number }; // 0..1 of full product area
 
@@ -21,7 +22,9 @@ const BLUEPRINT_ID = parseInt(process.env.PRINTIFY_BLUEPRINT_ID || "", 10);
 const PROVIDER_ID = parseInt(process.env.PRINTIFY_PRINT_PROVIDER_ID || "", 10);
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  //const session = await getServerSession(authOptions);
+const session = await auth();
+
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
