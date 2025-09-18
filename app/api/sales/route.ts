@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { shopifyGraphQL } from "@/lib/shopify";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+// import { getServerSession } from "next-auth";
+// import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 export const runtime = "edge"; //issue with cloudflare pages
 
@@ -38,7 +39,9 @@ query Orders($first: Int!, $query: String) {
 `;
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  // const session = await getServerSession(authOptions);
+  const session = await auth();
+
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const url = new URL(req.url);

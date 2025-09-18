@@ -67,21 +67,23 @@
 // Modern "Aurora" look with tasteful gradients, grid overlay, and accessible CSS-only tabs.
 
 import { redirect } from "next/navigation";
-import { getSessionServer } from "@/lib/auth.server"; // server-only helper
+//import { getSessionServer } from "@/lib/auth.server"; // server-only helper
 import ProfileTab from "./profile-tab";
 import SalesTab from "./sales-tab";
 import CreateProductTab from "./create-product-tab";
 import Mydesign from "./myDesign";
 import ProductDesignerClient from "./ProductDesignerClient"; // client wrapper
 import { SessionProvider } from "next-auth/react";
+import { auth } from "@/lib/auth";
 
 export const runtime = "edge"; //issue with cloudflare pages
 
 export const revalidate = 0; // keep session fresh on each request
 
 export default async function Dashboard() {
-  const session = await getSessionServer();
-  
+  //const session = await getSessionServer();
+  const session = await auth();
+
   if (!session?.user) redirect("/auth/signin?callbackUrl=/designer/dashboard");
   const email = session.user.email ?? ""; // ensure defined for SalesTab prop
 

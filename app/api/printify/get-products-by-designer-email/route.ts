@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 
 export const runtime = "edge"; //issue with cloudflare pages
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth.options";
+//import { getServerSession } from "next-auth";
+//import { authOptions } from "@/lib/auth.options";
 
 export async function GET(req: NextRequest) {
 
-  const session = await getServerSession(authOptions);
-
+  //const session = await getServerSession(authOptions);
+  const session = await auth();
 
   const { searchParams } = new URL(req.url);
-  const email = session?.user.email;//(searchParams.get("email") || "").trim();
+  
+  const email = session?.user?.email;//(searchParams.get("email") || "").trim();
+  
   if (!email) {
     return NextResponse.json({ error: "Missing ?email=" }, { status: 400 });
   }

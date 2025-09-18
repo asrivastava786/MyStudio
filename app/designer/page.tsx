@@ -1,10 +1,13 @@
-import { getSessionServer } from "@/lib/auth";
+//import { getSessionServer } from "@/lib/auth";
 import Link from "next/link";
+import { auth } from "@/lib/auth";
 
 export const runtime = "edge"; //issue with cloudflare pages
 
 export default async function DesignerHome() {
-  const session = await getSessionServer();
+  //const session = await getSessionServer();
+ const session = await auth();
+
   if (!session?.user) {
     return <div className="p-6">Brak dostępu.</div>;
   }

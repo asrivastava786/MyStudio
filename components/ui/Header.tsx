@@ -1,13 +1,16 @@
-    import Link from "next/link";
+    //import Link from "next/link";
     import HeaderClient from "@/components/ui/HeaderClient";
-    import { getSessionServer } from "@/lib/auth.server";
+    //import { getSessionServer } from "@/lib/auth.server";
     import { unstable_noStore as noStore } from "next/cache";
+    import { auth } from "@/lib/auth";
  
 
      export default async function Header() {
       noStore(); // ensure no caching
 
-      const session = await getSessionServer();
+      //const session = await getSessionServer();
+      const session = await auth();
+
   return (
     <div className=" bg-black text-white">
      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-black/70 bg-black/80 border-b border-white/10">

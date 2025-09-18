@@ -282,8 +282,9 @@
 
 // app/auth/signin/page.tsx
 import { redirect } from "next/navigation";
-import { getSessionServer } from "@/lib/auth";
+// import { getSessionServer } from "@/lib/auth";
 import SignInClient from "./SignInClient";
+import { auth } from "@/lib/auth";
 
 export const runtime = "edge"; //issue with cloudflare pages
 
@@ -294,7 +295,9 @@ export default async function Page({
 }) {
   const { callbackUrl } = await searchParams;
 
-  const session = await getSessionServer();
+  //const session = await getSessionServer();
+  const session = await auth();
+
   if (session?.user) {
     const cb = callbackUrl;
     const safeCb = cb && cb.startsWith("/") ? cb : "/designer/dashboard";
