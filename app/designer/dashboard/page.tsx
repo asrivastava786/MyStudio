@@ -1,222 +1,173 @@
-
-
-// import ProfileTab from "./profile-tab";
-// import SalesTab from "./sales-tab";
-// import { getSessionServer } from "@/lib/auth";
-// import CreateProductTab from "./create-product-tab";
-// import Mydesign from "./myDesign"
-// import ProductDesigner from "./productDesigner"
-
-
-// export default async function Dashboard() {
-//   const session = await getSessionServer();
-//   if (!session?.user) return <div className="p-6">No Available.</div>;
-
-//   return (
-//     <main className="max-w-4xl mx-auto p-6 space-y-6">
-//       <h1 className="text-2xl font-semibold">Artist Panel</h1>
-//       <p className="text-sm text-gray-600">Logged in as {session.user.email}</p>         
-       
-       
-//       <div className="border rounded-2xl p-4">
-        
-
-//         <Tabs />
-//       </div>
-//     </main>
-//   );
-// }
-
-// function Tabs() {
-//   return (
-//     <div className="space-y-4">
-//       <input type="radio" id="tab1" name="tabs" defaultChecked className="hidden peer/tab1" />
-//       <input type="radio" id="tab2" name="tabs" className="hidden peer/tab2" />
-//       <input type="radio" id="tab3" name="tabs" className="hidden peer/tab3" />
-//       <input type="radio" id="tab4" name="tabs" className="hidden peer/tab4" />      
-    
-
-//       <div className="flex gap-2">
-//         <label htmlFor="tab1" className="px-3 py-2 rounded-full border cursor-pointer">Profile</label>
-//         <label htmlFor="tab2" className="px-3 py-2 rounded-full border cursor-pointer">Sales</label>
-//         <label htmlFor="tab3" className="px-3 py-2 rounded-full border cursor-pointer">Create Produkt</label>
-//         <label htmlFor="tab4" className="px-3 py-2 rounded-full border cursor-pointer">My Designs</label>
-//       </div>
-//       <div className="peer-checked/tab1:block hidden">
-//         <ProfileTab />
-//       </div>
-//       <div className="peer-checked/tab2:block hidden">
-//         <SalesTab />
-//       </div>
-//       <div className="peer-checked/tab3:block hidden">
-//         <CreateProductTab />
-//       </div>
-
-//       <div className="peer-checked/tab3:block hidden">
-//         <ProductDesigner />
-//       </div>
-//         <div className="peer-checked/tab4:block hidden">
-//         <Mydesign/>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-// app/designer/dashboard/page.tsx — server component
-// Modern "Aurora" look with tasteful gradients, grid overlay, and accessible CSS-only tabs.
-
 import { redirect } from "next/navigation";
-//import { getSessionServer } from "@/lib/auth.server"; // server-only helper
 import ProfileTab from "./profile-tab";
 import SalesTab from "./sales-tab";
 import CreateProductTab from "./create-product-tab";
 import Mydesign from "./myDesign";
-import ProductDesignerClient from "./ProductDesignerClient"; // client wrapper
-import { SessionProvider } from "next-auth/react";
+import ProductDesignerClient from "./ProductDesignerClient";
 import { auth } from "@/lib/auth";
 
-//export const runtime = "edge"; //issue with cloudflare pages
-
-export const revalidate = 0; // keep session fresh on each request
+export const revalidate = 0;
 
 export default async function Dashboard() {
-  //const session = await getSessionServer();
   const session = await auth();
-
   if (!session?.user) redirect("/auth/signin?callbackUrl=/designer/dashboard");
-  const email = session.user.email ?? ""; // ensure defined for SalesTab prop
+
+  const email = session.user.email ?? "";
+  const name = session.user.name ?? email.split("@")[0];
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
-    <main className="relative min-h-screen text-white">
-      {/* --- Decorative background: subtle grid + aurora blobs --- */}
-      <div className="pointer-events-none absolute inset-0 -z-10 " >
-        {/* Grid overlay */}
-        <div className="absolute inset-0 opacity-50 [mask-image:radial-gradient(80%_60%_at_50%_10%,black,transparent)] bg-[linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] bg-[size:22px_22px]" />
-        {/* Aurora blobs */}
-        <div className="absolute -top-24 -left-24 h-[32rem] w-[32rem] rounded-full blur-3xl bg-gradient-to-br from-fuchsia-500/25 via-violet-500/15 to-cyan-400/20" />
-        <div className="absolute -bottom-24 -right-16 h-[28rem] w-[28rem] rounded-full blur-3xl bg-gradient-to-tr from-emerald-400/20 via-cyan-400/10 to-indigo-500/20" />
+    <main className="relative min-h-screen bg-[#080808] text-white overflow-x-hidden">
+      {/* ── Ambient background ── */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        {/* fine dot grid */}
+        <div className="absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:28px_28px]" />
+        {/* top-left glow */}
+        <div className="absolute -top-32 -left-32 h-[36rem] w-[36rem] rounded-full blur-[120px] bg-violet-600/10" />
+        {/* bottom-right glow */}
+        <div className="absolute -bottom-32 -right-32 h-[32rem] w-[32rem] rounded-full blur-[120px] bg-fuchsia-500/8" />
+        {/* center accent */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[20rem] w-[60rem] rounded-full blur-[140px] bg-indigo-500/5" />
       </div>
 
-      {/* Page container */}
-      <section className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-        {/* Header */}
-        <header className="flex flex-wrap items-start justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* ── Page header ── */}
+        <header className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-white/8">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-fuchsia-400 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
-              Artist Panel
+            <p className="text-xs tracking-[0.2em] uppercase text-white/30 mb-1">Studio Dashboard</p>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+              Welcome back,{" "}
+              <span className="bg-gradient-to-r from-white via-white/80 to-white/50 bg-clip-text text-transparent">
+                {name}
+              </span>
             </h1>
-            <p className="mt-1 text-sm text-black/70">Logged in as {session.user.email}</p>
+            <p className="text-sm text-white/35 mt-0.5">{email}</p>
+          </div>
+
+          {/* Avatar chip */}
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-xs font-bold text-white select-none">
+              {initials}
+            </div>
+            <div className="text-xs text-white/50 hidden sm:block">
+              <span className="block text-white/80 font-medium">{name}</span>
+              Designer
+            </div>
           </div>
         </header>
 
-        {/* KPI Row (placeholders; wire real data later) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* ── KPI strip ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { label: "Total Sales", value: "—" },
-            { label: "Revenue", value: "—" },
-            { label: "Conversion", value: "—" },
-            { label: "Active Designs", value: "—" },
+            { label: "Total Sales", value: "—", sub: "all time" },
+            { label: "Revenue", value: "—", sub: "USD" },
+            { label: "Conversion", value: "—", sub: "rate" },
+            { label: "Active Designs", value: "—", sub: "live" },
           ].map((s) => (
-            <div key={s.label} className="group relative overflow-hidden rounded-2xl border border-black/40 bg-black/5 p-4 backdrop-blur">
-              <div className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-fuchsia-400/20 via-cyan-300/20 to-emerald-300/20" />
-              <p className="text-xs text-black/60">{s.label}</p>
-              <p className="mt-1 text-xl font-medium tracking-tight">{s.value}</p>
+            <div
+              key={s.label}
+              className="group relative rounded-2xl border border-white/8 bg-white/[0.03] p-4 overflow-hidden"
+            >
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-violet-500/8 to-fuchsia-500/8" />
+              <p className="text-[11px] tracking-widest uppercase text-white/30">{s.label}</p>
+              <p className="mt-1.5 text-2xl font-semibold tracking-tight">{s.value}</p>
+              <p className="text-[11px] text-white/25 mt-0.5">{s.sub}</p>
             </div>
           ))}
         </div>
 
-        {/* Tabs */}
-        <Tabs email={email}/>
-      </section>
+        {/* ── Tabs ── */}
+        <Tabs email={email} />
+      </div>
     </main>
   );
 }
 
+/* ─────────────────────────────────────────────────────── */
+/* Tabs                                                     */
+/* ─────────────────────────────────────────────────────── */
+
 function Tabs({ email }: { email: string }) {
+  const tabs = [
+    { id: "tab-profile",  peer: "profile",  label: "Profile" },
+    { id: "tab-sales",    peer: "sales",    label: "Sales" },
+    { id: "tab-create",   peer: "create",   label: "Create Product" },
+    { id: "tab-my",       peer: "my",       label: "My Designs" },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Radios (must be siblings of panels for peer-checked utilities) */}
+      {/* hidden radio inputs — siblings of panels */}
       <input id="tab-profile"  name="dashTabs" type="radio" defaultChecked className="peer/profile hidden" />
       <input id="tab-sales"    name="dashTabs" type="radio" className="peer/sales hidden" />
       <input id="tab-create"   name="dashTabs" type="radio" className="peer/create hidden" />
-      <input id="tab-designer" name="dashTabs" type="radio" className="peer/designer hidden" />
       <input id="tab-my"       name="dashTabs" type="radio" className="peer/my hidden" />
 
-      {/* Tab controls */}
-      <div className="rounded-2xl border border-black/50 p-1 bg-black/80 backdrop-blur flex flex-wrap gap-2">
-        {[
-          { id: "tab-profile",  title: "Profile",  peer: "profile" },
-        { id: "tab-sales",    title: "Sales",    peer: "sales" },
-          { id: "tab-create",   title: "Create Product", peer: "create" },
-          // { id: "tab-designer", title: "Product Designer", peer: "designer" },
-          { id: "tab-my",       title: "My Designs", peer: "my" },
-        ].map((t) => (
+      {/* Tab bar */}
+      <nav className="flex flex-wrap gap-1.5 p-1.5 rounded-2xl bg-white/[0.04] border border-white/8 backdrop-blur w-fit">
+        {tabs.map((t) => (
           <label
             key={t.id}
             htmlFor={t.id}
-            role="tab"
-            aria-controls={`panel-${t.peer}`}
-            className={
-              "relative cursor-pointer select-none rounded-full px-3 py-2 text-sm transition border border-white/10 " +
-              `peer-checked/${t.peer}:text-black peer-checked/${t.peer}:border-transparent ` +
-              `hover:border-black/30 ` +
-              // gradient chip when selected
-              `peer-checked/${t.peer}:bg-gradient-to-r peer-checked/${t.peer}:from-fuchsia-400 peer-checked/${t.peer}:via-cyan-300 peer-checked/${t.peer}:to-emerald-300`
-            }
+            className={[
+              "relative cursor-pointer select-none rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200",
+              "text-white/40 hover:text-white/70",
+              `peer-checked/${t.peer}:text-white`,
+              `peer-checked/${t.peer}:bg-white/10`,
+              `peer-checked/${t.peer}:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]`,
+            ].join(" ")}
           >
-            {t.title}
+            {t.label}
           </label>
         ))}
-      </div>
+      </nav>
 
       {/* Panels */}
-      <section id="panel-profile" role="tabpanel" className="hidden peer-checked/profile:block">
-        <Card>
+      <section className="hidden peer-checked/profile:block">
+        <Panel>
           <ProfileTab />
-        </Card>
+        </Panel>
       </section>
 
-      <section id="panel-sales" role="tabpanel" className="hidden peer-checked/sales:block">
-        <Card>
-
-          <SalesTab Useremail={email}/>
-          
-        </Card>
+      <section className="hidden peer-checked/sales:block">
+        <Panel>
+          <SalesTab Useremail={email} />
+        </Panel>
       </section>
 
-
-      <section id="panel-create" role="tabpanel" className="hidden peer-checked/create:block">
-        <Card id="create">
-          <CreateProductTab />
-          <section className="mt-5">
-
-           <ProductDesignerClient />
-
-           </section>
-        </Card>
+      <section className="hidden peer-checked/create:block">
+        <Panel>
+          <div>
+            <p className="text-[11px] tracking-[0.18em] uppercase text-white/30 mb-1">Designer</p>
+            <h2 className="text-xl font-semibold mb-4">Place Your Design</h2>
+            <ProductDesignerClient />
+          </div>
+          <div className="mt-8 pt-8 border-t border-white/8">
+            <CreateProductTab />
+          </div>
+        </Panel>
       </section>
 
-
-      <section id="panel-my" role="tabpanel" className="hidden peer-checked/my:block">
-        <Card>
+      <section className="hidden peer-checked/my:block">
+        <Panel>
           <Mydesign />
-        </Card>
+        </Panel>
       </section>
     </div>
   );
 }
 
-function Card({ children, id }: { children: React.ReactNode; id?: string }) {
+function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      id={id}
-      className="relative overflow-hidden rounded-2xl border border-black/20 bg-white/5 p-4 lg:p-6 backdrop-blur"
-    >
-      {/* faint angle sheen */}
-      <div className="pointer-events-none absolute -inset-px opacity-0 hover:opacity-100 transition-opacity duration-500 bg-[conic-gradient(from_180deg_at_50%_0%,rgba(255,255,255,0.06),rgba(255,255,255,0)_30%,rgba(255,255,255,0.06)_60%,rgba(255,255,255,0)_100%)]" />
+    <div className="relative rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur p-5 lg:p-7 overflow-hidden">
+      {/* subtle corner sheen */}
+      <div className="pointer-events-none absolute -top-px -left-px w-48 h-48 bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.04),transparent_60%)]" />
       {children}
     </div>
   );
 }
-

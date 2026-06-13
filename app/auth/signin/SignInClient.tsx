@@ -58,11 +58,8 @@ export default function SignInClient() {
     if (loading) return;
     resetMsgs();
     setLoading("google");
-    // OAuth will redirect away
+    // OAuth causes a full browser redirect — router.refresh() is not needed here
     await signIn("google", { callbackUrl });
-
-    router.refresh(); // ⬅️ forces RSC to re-read cookies and re-render AuthAction
-
   };
 
   const onMagic = async () => {
@@ -73,7 +70,7 @@ export default function SignInClient() {
       return;
     }
     setLoading("magic");
-    const res = await signIn("email", { email: identifier, redirect: false, callbackUrl });
+    const res = await signIn("nodemailer", { email: identifier, redirect: false, callbackUrl });
     setLoading(null);
     // ✅ Anti-enumeration: same message whether email exists or not
     setInfo("Jeśli adres istnieje, wyślemy link do logowania. Sprawdź skrzynkę (i spam).");

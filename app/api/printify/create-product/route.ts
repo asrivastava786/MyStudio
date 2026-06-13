@@ -10,16 +10,19 @@ type Position = { x: number; y: number; width: number; height: number }; // 0..1
 type Body = {
   title: string;
   description?: string;
-  imageId: string;          // 👈 Printify image ID (pre-fetched via /api/printify/upload-image)
+  imageId: string;
   variantIds: number[];
-  priceCents: number;       // integer (e.g. 7900 for 79.00 PLN)
-  position: Position;       // from your designer
-  angle?: number;           // optional rotation (degrees)
+  priceCents: number;
+  position: Position;
+  angle?: number;
+  blueprintId?: number;
+  printProviderId?: number;
 };
 
 const SHOP_ID = parseInt(process.env.PRINTIFY_SHOP_ID || "", 10);
-const BLUEPRINT_ID = parseInt(process.env.PRINTIFY_BLUEPRINT_ID || "", 10);
-const PROVIDER_ID = parseInt(process.env.PRINTIFY_PRINT_PROVIDER_ID || "", 10);
+const ENV_BLUEPRINT_ID = parseInt(process.env.PRINTIFY_BLUEPRINT_ID || "", 10);
+const ENV_PROVIDER_ID = parseInt(process.env.PRINTIFY_PRINT_PROVIDER_ID || "", 10);
+
 
 export async function POST(req: NextRequest) {
   //const session = await getServerSession(authOptions);
@@ -37,6 +40,9 @@ const session = await auth();
     if (!Array.isArray(body.variantIds) || body.variantIds.length === 0) errs.push("No variants selected");
     if (!Number.isInteger(body.priceCents) || body.priceCents <= 0) errs.push("priceCents must be integer in cents");
 
+    const BLUEPRINT_ID = body.blueprintId && body.blueprintId > 0 ? body.blueprintId : ENV_BLUEPRINT_ID;
+    const PROVIDER_ID = body.printProviderId && body.printProviderId > 0 ? body.printProviderId : ENV_PROVIDER_ID;
+
     // validate position
     if (!Number.isFinite(SHOP_ID) || SHOP_ID <= 0)
       return NextResponse.json({ error: "Misconfigured PRINTIFY_SHOP_ID" }, { status: 500 });
@@ -45,7 +51,7 @@ const session = await auth();
     if (!Number.isFinite(PROVIDER_ID) || PROVIDER_ID <= 0)
       return NextResponse.json({ error: "Misconfigured PRINTIFY_PRINT_PROVIDER_ID" }, { status: 500 });
 
-  const p: Position = body.position as Position;
+    const p: Position = body.position as Position;
     (["x", "y", "width", "height"] as const).forEach((k) => {
       const v = p?.[k];
       if (typeof v !== "number" || v < 0 || v > 1) errs.push(`position.${k} must be 0..1`);
@@ -53,45 +59,41 @@ const session = await auth();
 
     if (errs.length) return NextResponse.json({ error: errs[0] }, { status: 400 });
 
-        // ---- derive placement for Printify images[]
-    // Printify expects center-based coordinates and a scale factor.
-    const cx = +(p.x + p.width / 2).toFixed(4);   // center X (0..1)
-    const cy = +(p.y + p.height / 2).toFixed(4);  // center Y (0..1)
-    // Approximate scale by desired width fraction; for exact scaling, use placeholder px width.
+    const cx = +(p.x + p.width / 2).toFixed(4);
+    const cy = +(p.y + p.height / 2).toFixed(4);
     const scale = +p.width.toFixed(4);
     const angle = Math.round(body.angle ?? 0);
 
-    // Build payload
-const payload = {
-  title: body.title,
-  description: body.description || "",
-  blueprint_id: BLUEPRINT_ID,  //Number(process.env.PRINTIFY_BLUEPRINT_ID),
-  print_provider_id: PROVIDER_ID,  //Number(process.env.PRINTIFY_PRINT_PROVIDER_ID),
-  variants: body.variantIds.map((id:number) => ({ id, price: body.priceCents, is_enabled: true })),
-  print_areas: [
-    {
-      variant_ids: body.variantIds,
-      placeholders: [
+    const payload = {
+      title: body.title,
+      description: body.description || "",
+      blueprint_id: BLUEPRINT_ID,
+      print_provider_id: PROVIDER_ID,
+      variants: body.variantIds.map((id: number) => ({ id, price: body.priceCents, is_enabled: true })),
+      print_areas: [
         {
-          position: "front",
-          images: [
+          variant_ids: body.variantIds,
+          placeholders: [
             {
-              id: body.imageId,         // 👈 direct Printify ID
-              x: cx,
-              y: cy,
-              scale,
-              angle,
+              position: "front",
+              images: [
+                {
+                  id: body.imageId,
+                  x: cx,
+                  y: cy,
+                  scale,
+                  angle,
+                },
+              ],
             },
           ],
         },
       ],
-    },
-  ],
-  publish: false,
-};
-console.log("Printify create payload:", JSON.stringify(payload)+"...");
+      publish: false,
+    };
+    console.log("Printify create payload:", JSON.stringify(payload));
 
-       const res = await fetch(
+    const res = await fetch(
       `https://api.printify.com/v1/shops/${SHOP_ID}/products.json`,
       {
         method: "POST",

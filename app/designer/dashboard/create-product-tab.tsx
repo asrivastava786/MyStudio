@@ -1,169 +1,203 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDesignerStore } from "@/lib/designerStore";
-import Pdesigner from "./productDesigner";
+import { PRODUCT_TEMPLATES } from "@/lib/productTemplates";
 
-//export const runtime = "edge"; //issue with cloudflare pages
-
-type CreateResult = { ok: boolean; product?: any; error?: string };
-
-
-const presetVariants = (process.env.NEXT_PUBLIC_PRINTIFY_DEFAULT_VARIANTS || "")
-  .split(",")
-  .map((v) => Number(v.trim()))
-  .filter(Boolean);
+type PublishResult = { id: string; ok: boolean; msg: string };
 
 export default function CreateProductTab() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("Bawełniana torba ZORY. Małe logo. Edycja artystyczna.");
-  //const [artworkUrl, setArtworkUrl] = useState("");
-  const [price, setPrice] = useState<string>("");
+  const queue = useDesignerStore((s) => s.queue);
+  const removeFromQueue = useDesignerStore((s) => s.removeFromQueue);
+  const updateQueueItem = useDesignerStore((s) => s.updateQueueItem);
 
-  const [variants, setVariants] = useState<number[]>(presetVariants.length ? presetVariants : []);
-  //const [pos, setPos] = useState({ x: 0.25, y: 0.22, width: 0.5, height: 0.56 });
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string>("");
+  const [publishing, setPublishing] = useState(false);
+  const [results, setResults] = useState<PublishResult[]>([]);
 
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setPrice("0");
-    setVariants([]);
-    //setSharedId(null);          // or keep if you don’t want to clear the uploaded design
-    //setSharedBox(null);         // or set to EMPTY_BOX if you prefer zeros
-    // leave success message visible; don’t clear `msg` here
-  };
+  const publishAll = async () => {
+    if (!queue.length) return;
+    setPublishing(true);
+    setResults([]);
 
+    const newResults: PublishResult[] = [];
 
-  // read from shared store (set by ProductDesigner)
-  const sharedId = useDesignerStore((s) => s.printifyImageId);
-  const sharedBox = useDesignerStore((s) => s.box);
-
-  // Optionally fetch available variants dynamically from your API proxy later.
-  useEffect(() => {
-    if (!variants.length && presetVariants.length) setVariants(presetVariants);
-  }, []);
-
-  const toggleVariant = (id: number) => {
-    setVariants((vs) => (vs.includes(id) ? vs.filter((v) => v !== id) : [...vs, id]));
-  };
-
-  const submit = async () => {
-    setMsg("");
-    if (!title.trim()) return setMsg("Dodaj tytuł.");
-    if (!sharedId) return setMsg("Najpierw wgraj projekt w zakładce Designer.");
-    if (!sharedBox) return setMsg("Ustaw pozycję/rozmiar projektu w Designerze.");
-    if (!variants.length) return setMsg("Wybierz przynajmniej jeden wariant.");
-
-    setLoading(true);
-    try {
-      const res = await fetch("/api/printify/create-product", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description,
-          imageId: sharedId,           //from Designer upload
-          variantIds: variants,
-          priceCents: Math.round(Number(price) * 100),
-          position: {
-            x: sharedBox.x,
-            y: sharedBox.y,
-            width: sharedBox.width,
-            height: sharedBox.height,
-          },
-          angle: sharedBox.angle ?? 0,
-        }),
-      });
-
-      const txt = await res.text();
-      let json: CreateResult | any = {};
-      try { json = JSON.parse(txt); } catch { }
-
-      if (!res.ok || !(json as any).ok) {
-        setMsg(json?.error || `Błąd tworzenia produktu (HTTP ${res.status})`);
-        console.log("details:", json?.details || txt);
-      } else {
-        resetForm(); // rest form on success
-        setMsg(`Product created (ID: ${json.product?.id}). Submitted to be Published.`);
+    for (const item of queue) {
+      if (!item.title?.trim()) {
+        newResults.push({ id: item.id, ok: false, msg: "Add a title first" });
+        continue;
       }
-    } catch {
-      setMsg("Błąd sieci.");
-    } finally {
-      setLoading(false);
+      if (!item.price || Number(item.price) <= 0) {
+        newResults.push({ id: item.id, ok: false, msg: "Set a price first" });
+        continue;
+      }
+
+      const template = PRODUCT_TEMPLATES.find((t) => t.id === item.productId);
+
+      try {
+        const res = await fetch("/api/printify/create-product", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: item.title,
+            description: "",
+            imageId: item.printifyImageId,
+            variantIds: template?.defaultVariants?.length
+              ? template.defaultVariants
+              : [76241],
+            priceCents: Math.round(Number(item.price) * 100),
+            position: {
+              x: item.position.x,
+              y: item.position.y,
+              width: item.position.width,
+              height: item.position.height,
+            },
+            angle: item.position.angle ?? 0,
+            blueprintId: template?.blueprintId || undefined,
+            printProviderId: template?.printProviderId || undefined,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        newResults.push({
+          id: item.id,
+          ok: res.ok && json.ok,
+          msg:
+            res.ok && json.ok
+              ? `Published (ID: ${json.product?.id})`
+              : json?.error || `Failed (${res.status})`,
+        });
+      } catch {
+        newResults.push({ id: item.id, ok: false, msg: "Network error" });
+      }
     }
+
+    setResults(newResults);
+    setPublishing(false);
+
+    newResults
+      .filter((r) => r.ok)
+      .forEach((r) => removeFromQueue(r.id));
   };
+
+  if (!queue.length) {
+    return (
+      <div className="text-center py-12 space-y-2">
+        <p className="text-white/30 text-sm">Queue is empty</p>
+        <p className="text-white/20 text-xs">
+          Use the Designer above to place your artwork and click&nbsp;
+          <strong className="text-white/30">+ Add to Queue</strong>.
+        </p>
+      </div>
+    );
+  }
+
+  const allReady = queue.every((i) => i.title?.trim() && Number(i.price) > 0);
 
   return (
     <div className="space-y-5">
-      <h2 className="text-xl font-semibold text-black">Design your Product @ZORY</h2>
-      <p className="text-sm text-black">
-        Will use the image and position from the <strong>Designer</strong>.
-      </p>
-
-      <div className="grid sm:grid-cols-2 gap-3">
-        <input className="border rounded px-3 py-2 text-black" placeholder="Title (np. ZORY — Urban Vibe)"
-          value={title} onChange={(e) => setTitle(e.target.value)} />
-
-        {/* removed manual URL field */}
-
-        <input className="border rounded px-3 py-2 sm:col-span-2 text-black"
-          placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
-
-        <div className="sm:col-span-2 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-black">Image from Designer:</span>
-            {sharedId ? (
-              <span className="px-2 py-1 rounded bg-emerald-50  text-black">Ready to launch ✅</span>
-            ) : (
-              <span className="px-2 py-1 rounded bg-amber-200  text-black">To Proceed Upload your design using Upload Button</span>
-            )}
-          </div>
-          {sharedBox && (
-            <code className="mt-1 block text-xs bg-gray-50 rounded px-2 py-1 text-black">
-              {JSON.stringify(sharedBox)}
-            </code>
-          )}
-        </div>
-
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <label className="text-sm text-black">Price (USD)</label>
-          <input type="number" step="0.01" className="w-full border rounded px-3 py-2 text-black"
-            value={price} onChange={(e) => {
-              const val = e.target.value;
-              setPrice((val));
-            }} />
+          <p className="text-[11px] tracking-[0.18em] uppercase text-white/30 mb-0.5">
+            Publishing Queue
+          </p>
+          <h2 className="text-xl font-semibold">
+            {queue.length} item{queue.length !== 1 ? "s" : ""}
+          </h2>
         </div>
 
-        {/* Variants */}
-        <div className="sm:col-span-2">
-          <label className="text-sm block mb-1">Select Variant (ID)</label>
-          <div className="flex flex-wrap gap-2 text-black">
-            {(presetVariants.length ? presetVariants : [76241]).map((id) => (
-              <button type="button" key={id}
-                onClick={() => toggleVariant(id)}
-                className={`px-3 py-1 rounded border ${variants.includes(id) ? "bg-black text-white" : ""}`}>
-                {id}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Select the variants.
-          </p>
-        </div>
+        <button
+          onClick={publishAll}
+          disabled={publishing || !allReady}
+          className="px-5 py-2.5 rounded-xl bg-white text-black text-sm font-medium hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {publishing ? (
+            <span className="flex items-center gap-2">
+              <Spinner /> Publishing…
+            </span>
+          ) : (
+            "Publish All"
+          )}
+        </button>
       </div>
 
-      {msg && <p className={`text-sm ${msg.startsWith("Utworzono") ? "text-emerald-700" : "text-red-600"}`}>{msg}</p>}
+      <div className="space-y-3">
+        {queue.map((item) => {
+          const template = PRODUCT_TEMPLATES.find((t) => t.id === item.productId);
+          const result = results.find((r) => r.id === item.id);
 
-      <button onClick={submit} disabled={loading}
-        className="bg-black text-white rounded px-4 py-2 disabled:opacity-60">
-        {loading ? "Tworzenie…" : "Publish Product"}
-      </button>
+          return (
+            <div
+              key={item.id}
+              className="flex gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
+            >
+              {/* Preview thumbnail */}
+              {item.previewDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.previewDataUrl}
+                  alt="preview"
+                  className="w-16 h-20 object-cover rounded-lg shrink-0 bg-black/40"
+                  draggable={false}
+                />
+              ) : (
+                <div className="w-16 h-20 rounded-lg bg-white/5 shrink-0" />
+              )}
+
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-[11px] text-white/40">
+                    {template?.name ?? item.productId} · {item.zoneId}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFromQueue(item.id)}
+                    className="text-white/25 hover:text-white/60 text-xs shrink-0 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <input
+                  placeholder="Product title"
+                  value={item.title ?? ""}
+                  onChange={(e) => updateQueueItem(item.id, { title: e.target.value })}
+                  className="w-full bg-white/[0.05] border border-white/12 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-white/30 transition-colors"
+                />
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="number"
+                    placeholder="Price USD"
+                    min="0"
+                    step="0.01"
+                    value={item.price ?? ""}
+                    onChange={(e) => updateQueueItem(item.id, { price: e.target.value })}
+                    className="w-28 bg-white/[0.05] border border-white/12 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-white/30 transition-colors"
+                  />
+                  {result && (
+                    <span
+                      className={`text-xs ${result.ok ? "text-emerald-400" : "text-red-400"}`}
+                    >
+                      {result.msg}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {!allReady && (
+        <p className="text-xs text-white/30 text-center">
+          Fill in title and price for all items to enable publishing.
+        </p>
+      )}
     </div>
-
-
-
   );
+}
 
+function Spinner() {
+  return (
+    <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-black/20 border-t-black/70 animate-spin" />
+  );
 }

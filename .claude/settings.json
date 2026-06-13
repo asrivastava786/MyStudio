@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"d:\\\\Zory Studio\\\\zory-studio\" -Force)",
+      "Bash(Select-Object -Property Name, Mode)"
+    ]
+  }
+}

@@ -3,7 +3,6 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { id } from "zod/locales";
 
 /* ---------- Helpers ---------- */
 
@@ -289,33 +288,6 @@ for (const v of views) {
   const viewPk = Number(v?.id) || 0;                 // you still use external id as PK
   const externalViewId = viewPk;                // Printify view id
 
-  // guard: avoid global PK collision with another product
-const existing = await tx.view.findFirst({
-  where: { productId, externalId: externalViewId },
-  select: { id: true },
-});
-
-const views = existing
-  ? await tx.view.update({
-      where: { id: existing.id },
-      data: {
-        label: String(v?.label ?? ""),
-        position: toPosition(v?.position),
-      },
-      select: { id: true },
-    })
-  : await tx.view.create({
-      data: {
-        productId,
-        externalId: externalViewId,
-        label: String(v?.label ?? ""),
-        position: toPosition(v?.position),
-      },
-      select: { id: true },
-    });
-
-
-  // ✅ include externalId on both create and update
   const view = await tx.view.upsert({
     where: {  productId_externalId: { productId, externalId: externalViewId }},
     update: {

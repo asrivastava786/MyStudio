@@ -49,7 +49,8 @@ export async function GET(req: NextRequest) {
   const days = Number(url.searchParams.get("days") || 30);
   if (!handle) return NextResponse.json({ error: "Missing handle" }, { status: 400 });
 
-  const fromDate = new Date(Date.now() - days * 864e5).toISOString();
+  const MS_PER_DAY = 86_400_000;
+  const fromDate = new Date(Date.now() - days * MS_PER_DAY).toISOString();
   // Shopify order query string: status:open/closed/any + created_at
   const q = `created_at:>=${fromDate}`;
 

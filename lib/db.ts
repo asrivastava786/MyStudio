@@ -1,14 +1,16 @@
-//import { PrismaClient } from "../app/generated/prisma";
-
 import { PrismaClient } from "@prisma/client";
+import { withAccelerate } from "@prisma/extension-accelerate";
 
+function createClient() {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["query"] : [],
+  }).$extends(withAccelerate());
+}
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+type DbClient = ReturnType<typeof createClient>;
 
-export const db  =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ["query"], // optional for debugging
-  });
+const globalForPrisma = global as unknown as { prisma: DbClient };
+
+export const db: DbClient = globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
