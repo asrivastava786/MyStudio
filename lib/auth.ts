@@ -29,6 +29,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // PrismaAdapter actually calls at runtime.
   adapter: PrismaAdapter(db as unknown as PrismaClient),
   session: { strategy: "jwt" },
+  // Not deploying to Vercel — NextAuth only auto-trusts the request host
+  // there, so it needs to be told explicitly on Hostinger/other hosts.
+  trustHost: true,
 
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
