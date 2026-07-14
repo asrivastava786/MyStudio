@@ -146,16 +146,30 @@ export default function ProductDesignerRK() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // ── Responsive scale ────────────────────────────────────────────────────────
+  // Fit the canvas within both the container width AND a viewport-height
+  // budget — a tall/high-res mockup photo shouldn't force the page to
+  // scroll just to see the whole product.
   const [scale, setScale] = useState(1);
+  const MAX_CANVAS_VH = 0.62;
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !product) return;
-    const update = (w: number) => setScale(w / product.canvasW);
+    const update = (w: number) => {
+      const maxHeight = window.innerHeight * MAX_CANVAS_VH;
+      const widthScale = w / product.canvasW;
+      const heightScale = maxHeight / product.canvasH;
+      setScale(Math.min(widthScale, heightScale));
+    };
+    const onWindowResize = () => update(el.getBoundingClientRect().width);
     update(el.getBoundingClientRect().width);
     const ro = new ResizeObserver((e) => update(e[0].contentRect.width));
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener("resize", onWindowResize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", onWindowResize);
+    };
   }, [product]);
 
   // ── Transformer sync ────────────────────────────────────────────────────────
@@ -549,13 +563,12 @@ export default function ProductDesignerRK() {
       )}
 
       {/* ── 3-Layer sandwich canvas ───────────────────────────────────────── */}
-      <div
-        ref={containerRef}
-        className="w-full rounded-2xl overflow-hidden border border-white/8 bg-[#0d0d0d]"
-      >
-        {/* Height = canvasH scaled to container width */}
+      <div ref={containerRef} className="w-full flex justify-center">
+        {/* Sized to fit both container width and a viewport-height budget,
+            then centered — never forces the page to scroll to see it all. */}
         <div
-          style={{ width: "100%", height: canvasH * scale, position: "relative" }}
+          className="rounded-2xl overflow-hidden border border-white/8 bg-[#0d0d0d]"
+          style={{ width: canvasW * scale, height: canvasH * scale, position: "relative" }}
         >
           {/* ── Layer 1: product background ── */}
           {mockupUrl ? (
