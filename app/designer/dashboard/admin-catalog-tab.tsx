@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { notifyCatalogTemplatesChanged } from "@/lib/useCatalogTemplates";
 
 /* ─────────────────────────────────────────────────────────────────────────
  * Types
@@ -58,11 +59,13 @@ export default function AdminCatalogTab() {
       body: JSON.stringify({ active: !t.active }),
     });
     refreshTemplates();
+    notifyCatalogTemplatesChanged();
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete this catalog product? Designers will no longer see it.")) return;
     await fetch(`/api/admin/catalog-templates/${id}`, { method: "DELETE" });
+    notifyCatalogTemplatesChanged();
     refreshTemplates();
   };
 
@@ -71,7 +74,12 @@ export default function AdminCatalogTab() {
       <div>
         <p className="text-[11px] tracking-[0.18em] uppercase text-white/30 mb-1">Admin</p>
         <h2 className="text-xl font-semibold mb-4">Add a Printify Product</h2>
-        <NewTemplateForm onCreated={refreshTemplates} />
+        <NewTemplateForm
+          onCreated={() => {
+            refreshTemplates();
+            notifyCatalogTemplatesChanged();
+          }}
+        />
       </div>
 
       <div className="pt-8 border-t border-white/8">
