@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as bcryptjs from "bcryptjs";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 //export const runtime = "edge"; // Cloudflare/Edge compatible
 
@@ -20,6 +21,17 @@ async function sha256Hex(input: string): Promise<string> {
 
 export async function POST(req: Request) {
   try {
+    const { ok, retryAfterSeconds } = rateLimit(`reset:${getClientIp(req)}`, {
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!ok) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
+      );
+    }
+
     const raw = await req.json().catch(() => null) as unknown;
 
     // Validate BEFORE destructuring so TS can narrow

@@ -91,7 +91,6 @@ const session = await auth();
       ],
       publish: false,
     };
-    console.log("Printify create payload:", JSON.stringify(payload));
 
     const res = await fetch(
       `https://api.printify.com/v1/shops/${SHOP_ID}/products.json`,
@@ -110,8 +109,7 @@ const session = await auth();
     try { 
       json = JSON.parse(text); 
       json.creatorName = session.user.name;
-      json.creatorEmail = session.user.email; 
-      console.log("Printify create response:", json);
+      json.creatorEmail = session.user.email;
 
       // On success, ingest into local DB
       if (res.ok && json?.id) {
@@ -119,7 +117,10 @@ const session = await auth();
           const url = new URL("/api/printify/product-created-at-printify", req.url);
           const cproduct = fetch(url.toString(), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-secret": process.env.PRINTIFY_INGEST_INTERNAL_SECRET || "",
+          },
           body: JSON.stringify(json),
           cache: "no-store",
           });

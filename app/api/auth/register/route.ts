@@ -3,9 +3,21 @@ import { db } from "@/lib/db";
 import { RegisterSchema } from "@/lib/validation";
 import { sendWelcomeEmail } from "@/lib/mailer";
 import { hash } from "bcryptjs";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    const { ok, retryAfterSeconds } = rateLimit(`register:${getClientIp(req)}`, {
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!ok) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
+      );
+    }
+
     const json = await req.json();
     const parsed = RegisterSchema.safeParse(json);
 

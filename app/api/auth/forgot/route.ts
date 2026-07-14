@@ -2,9 +2,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { generateResetToken } from "@/lib/token";
 import { sendPasswordResetEmail } from "@/lib/mailer";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const { ok, retryAfterSeconds } = rateLimit(`forgot:${getClientIp(req)}`, {
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!ok) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
+      );
+    }
+
     const body = await req.json().catch(() => null);
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
 

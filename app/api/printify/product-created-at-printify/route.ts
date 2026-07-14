@@ -2,7 +2,42 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
+
+/* ---------- Request authentication ----------
+ * Two trusted callers hit this route:
+ *  1. Printify's webhook, signed with HMAC-SHA256 using the webhook's
+ *     signing secret, sent as `X-Pfy-Signature: sha256=<hex>`.
+ *     https://developers.printify.com/#webhooks
+ *  2. Our own `create-product` route, which ingests the product it just
+ *     created without waiting for the webhook round-trip. It authenticates
+ *     with a shared internal secret instead, since it isn't Printify.
+ */
+function isValidPrintifySignature(rawBody: string, signatureHeader: string | null): boolean {
+  const secret = process.env.PRINTIFY_WEBHOOK_SECRET;
+  if (!secret || !signatureHeader) return false;
+
+  const provided = signatureHeader.startsWith("sha256=")
+    ? signatureHeader.slice("sha256=".length)
+    : signatureHeader;
+
+  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
+
+  const a = Buffer.from(provided, "hex");
+  const b = Buffer.from(expected, "hex");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function isValidInternalSecret(headerValue: string | null): boolean {
+  const secret = process.env.PRINTIFY_INGEST_INTERNAL_SECRET;
+  if (!secret || !headerValue) return false;
+  const a = Buffer.from(headerValue);
+  const b = Buffer.from(secret);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 /* ---------- Helpers ---------- */
 
@@ -29,9 +64,19 @@ const ensureArray = <T = any>(v: any): T[] => (Array.isArray(v) ? v : []);
 /* ---------- Route ---------- */
 
 export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+
+  const authorized =
+    isValidPrintifySignature(rawBody, req.headers.get("x-pfy-signature")) ||
+    isValidInternalSecret(req.headers.get("x-internal-secret"));
+
+  if (!authorized) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
   let payload: any;
   try {
-    payload = await req.json();
+    payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

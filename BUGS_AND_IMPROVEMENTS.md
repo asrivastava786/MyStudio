@@ -94,7 +94,7 @@ Inside the `for (const v of views)` loop (line 288), the code first does a manua
 
 **Fix:** Remove the manual `findFirst`/`update`/`create` block entirely (lines 293–315). Keep only the `upsert` into `const view`.
 
-**Status:** `TODO`
+**Status:** `FIXED`
 
 ---
 
@@ -110,7 +110,7 @@ import { id } from "zod/locales";
 // (delete the line)
 ```
 
-**Status:** `TODO`
+**Status:** `FIXED`
 
 ---
 
@@ -128,7 +128,7 @@ new PrismaClient({
 })
 ```
 
-**Status:** `TODO`
+**Status:** `FIXED`
 
 ---
 
@@ -146,7 +146,7 @@ const MIN_H = 530;  // was 5309
 
 The commented-out values (5907 × 5309 px) match Printify's high-res print specs. The current values (590 × 530 px) accept thumbnail-sized images. Verify the correct spec with Printify docs and restore.
 
-**Status:** `TODO`
+**Status:** `FIXED` — restored to 5907×5309.
 
 ---
 
@@ -160,7 +160,7 @@ const data = await shopifyGraphQL<ShopifyResp>(QUERY, { first: 50, query: q });
 
 Also, line 52 uses a magic number `864e5` (milliseconds/day). Should be a named constant.
 
-**Status:** `TODO`
+**Status:** `FIXED` — cursor-paginated up to 20 pages (1000 orders) per request via `pageInfo.hasNextPage`/`endCursor`.
 
 ---
 
@@ -168,7 +168,7 @@ Also, line 52 uses a magic number `864e5` (milliseconds/day). Should be a named 
 **File:** `lib/auth.ts` lines 1–97  
 **Severity:** Low — 97 lines of commented-out NextAuth v4 config. Adds noise; the live v5 config starts at line 99. Safe to delete.
 
-**Status:** `TODO`
+**Status:** `FIXED`
 
 ---
 
@@ -176,7 +176,7 @@ Also, line 52 uses a magic number `864e5` (milliseconds/day). Should be a named 
 **File:** `app/auth/register/page.tsx`  
 The register page UI is commented out. The API route (`/api/auth/register`) is fully functional. The page needs to be wired up so users can actually register via the UI.
 
-**Status:** `TODO`
+**Status:** `FIXED`
 
 ---
 
@@ -193,7 +193,7 @@ declare module "next-auth" {
 }
 ```
 
-**Status:** `TODO`
+**Status:** `FIXED` — `id` added to `User`/`Session` module augmentation; only remaining cast is `db as unknown as PrismaClient` for `PrismaAdapter` (Accelerate-extended client type mismatch, not an `any`).
 
 ---
 
@@ -202,6 +202,8 @@ declare module "next-auth" {
 ### SEC-1 — NEXTAUTH_SECRET appears to be a placeholder
 **File:** `.env`  
 The value `generate_a_strong_secret` looks like it was never replaced with an actual secret. Run `openssl rand -base64 32` and replace it. A weak/known secret breaks JWT signing.
+
+**Status:** `FIXED` — replaced with a generated 32-byte base64 secret. **This value must still be regenerated for the real production deployment** — reuse the local dev secret in prod only if you're okay treating them as the same trust boundary, otherwise generate a fresh one.
 
 ### SEC-2 — `.env` must not be committed
 Ensure `.env` is in `.gitignore` (it should be — verify). If any credentials were ever committed, rotate them:
@@ -212,24 +214,48 @@ Ensure `.env` is in `.gitignore` (it should be — verify). If any credentials w
 - `PRINTIFY_API_KEY`
 - `NEXTAUTH_SECRET`
 
+**Status:** `VERIFIED OK` — `.gitignore` has `.env*`. Added `.env.example` as a safe-to-commit template. This project isn't currently a git repo, so there's no history to check — if/when it's pushed, double check `.env` was never staged.
+
 ### SEC-3 — `NEXT_PUBLIC_APP_URL` not set
 **File:** `app/api/auth/forgot/route.ts` line 36  
 Password reset email links fall back to `VERCEL_URL` or `http://localhost:3000`. On production this will send reset links pointing to localhost unless `NEXT_PUBLIC_APP_URL` is explicitly set in the deployment env.
+
+**Status:** `FIXED` — set in `.env` for local dev. **Must also be set in the production hosting env (Netlify) to the real domain.**
+
+### SEC-4 — Printify webhook accepted any unauthenticated POST
+**File:** `app/api/printify/product-created-at-printify/route.ts`  
+The ingest endpoint wrote to the DB for any POST body with an `id` field — no verification the request actually came from Printify. Anyone with the URL could inject arbitrary product data.
+
+**Status:** `FIXED` — added HMAC-SHA256 signature verification against `X-Pfy-Signature` using `PRINTIFY_WEBHOOK_SECRET` (Printify's real webhook secret — set this when you register the webhook in Printify's dashboard). The internal call from `create-product/route.ts` (which ingests immediately after creating a product, without waiting for the webhook) now authenticates via a separate `PRINTIFY_INGEST_INTERNAL_SECRET` shared secret instead.
+
+### SEC-5 — No rate limiting on auth endpoints
+**Files:** `app/api/auth/register/route.ts`, `app/api/auth/forgot/route.ts`, `app/api/auth/reset/route.ts`  
+Unlimited requests allowed registration spam, password-reset email flooding, and reset-token brute forcing.
+
+**Status:** `FIXED` — added `lib/rate-limit.ts` (in-memory fixed-window limiter, per-IP). Register/forgot: 5 req/15min; reset: 10 req/15min. Note: in-memory state is per server process — on multi-instance serverless deployments this is best-effort, not a hard guarantee. Move to a shared store (Upstash/Redis) if abuse becomes a real problem in production.
+
+### SEC-6 — No security headers
+**File:** `next.config.ts`  
+No CSP, HSTS, X-Frame-Options, etc.
+
+**Status:** `FIXED` — added `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security` via `headers()` in `next.config.ts`. Did not add a Content-Security-Policy — CSP needs to be tuned against actual script/style/image sources (Cloudinary, Google fonts, Konva canvas blobs, etc.) or it'll break the app; worth a follow-up pass.
 
 ---
 
 ## Improvements Backlog
 
-| # | Area | Description |
-|---|---|---|
-| I-1 | Sales | Add cursor-based pagination to Shopify query |
-| I-2 | Sales | Add `?from=` / `?to=` date range params |
-| I-3 | Dashboard | Wire up KPI cards (currently show "—") |
-| I-4 | Designer | Add loading skeleton instead of plain "Loading..." during Konva bundle load |
-| I-5 | Auth | Rate-limit `/api/auth/register` and `/api/auth/forgot` endpoints |
-| I-6 | Errors | Add structured error logging (e.g., Sentry) — currently only `console.error` |
-| I-7 | Config | Re-enable ESLint during builds (`eslint: { ignoreDuringBuilds: false }`) |
-| I-8 | Printify | Confirm correct MIN_W/MIN_H for print quality (BUG-1 is blocking I-8) |
+| # | Area | Description | Status |
+|---|---|---|---|
+| I-1 | Sales | Add cursor-based pagination to Shopify query | `FIXED` |
+| I-2 | Sales | Add `?from=` / `?to=` date range params | TODO |
+| I-3 | Dashboard | Wire up KPI cards (currently show "—") | TODO |
+| I-4 | Designer | Add loading skeleton instead of plain "Loading..." during Konva bundle load | TODO |
+| I-5 | Auth | Rate-limit `/api/auth/register` and `/api/auth/forgot` endpoints | `FIXED` (also added to `/reset`) |
+| I-6 | Errors | Add structured error logging (e.g., Sentry) — currently only `console.error` | TODO — needs a Sentry/monitoring account + DSN, not something to wire blind |
+| I-7 | Config | Re-enable ESLint during builds (`eslint: { ignoreDuringBuilds: false }`) | TODO — left as-is; flipping this could break the build on pre-existing lint errors, needs a dedicated lint cleanup pass first |
+| I-8 | Printify | Confirm correct MIN_W/MIN_H for print quality (BUG-1 is blocking I-8) | `FIXED` |
+| I-9 | Errors | Add `app/error.tsx` + `app/not-found.tsx` | `FIXED` |
+| I-10 | Testing | No test suite / CI exists (no `*.test.ts`, no `.github/workflows`) | TODO — larger effort, needs a framework decision (Vitest/Jest + Playwright) |
 
 ---
 
@@ -254,3 +280,13 @@ Password reset email links fall back to `VERCEL_URL` or `http://localhost:3000`.
 | 2026-05-24 | UI+BUG | `app/designer/dashboard/sales-tab.tsx` | Dark theme, replaced all `alert()` with inline error state, removed dead commented code, better table with hover states, stat cards |
 | 2026-05-24 | UI | `app/designer/dashboard/create-product-tab.tsx` | Dark inputs, description textarea, design-ready indicator, better variant buttons, inline feedback |
 | 2026-05-24 | UI | `app/designer/dashboard/myDesign.tsx` | Dark cards with hover zoom, replaced Radix Tabs (overkill) with native sort select, dark skeleton, dark tag pills, removed dead code |
+| 2026-07-08 | SEC-1/SEC-3 | `.env`, `.env.example` | Replaced placeholder `NEXTAUTH_SECRET` with a generated secret; added `NEXT_PUBLIC_APP_URL`; created `.env.example` template |
+| 2026-07-08 | ISSUE-1 | `image-process-upload/route.ts` | Restored `MIN_W`/`MIN_H` to Printify's real print spec (5907×5309) |
+| 2026-07-08 | ISSUE-2 | `sales/route.ts` | Added cursor-based pagination over Shopify orders (up to 1000 orders/request) |
+| 2026-07-08 | SEC-4 | `product-created-at-printify/route.ts`, `create-product/route.ts` | Added HMAC signature verification for Printify webhook calls; added internal shared-secret auth for the server-to-server ingest call from `create-product` |
+| 2026-07-08 | SEC-5 | `lib/rate-limit.ts`, `auth/register`, `auth/forgot`, `auth/reset` | Added in-memory per-IP rate limiting to all three auth endpoints |
+| 2026-07-08 | SEC-6 | `next.config.ts` | Added security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS) |
+| 2026-07-08 | I-9 | `app/error.tsx`, `app/not-found.tsx` | Added global error boundary and 404 page |
+| 2026-07-08 | ISSUE-5 | `lib/auth.ts` | Replaced `PrismaAdapter(db as any)` with a narrower `db as unknown as PrismaClient` cast (Accelerate-extended client type mismatch, not a blanket `any`) |
+| 2026-07-08 | — | `printify/create-product/route.ts` | Removed leftover debug `console.log` statements (request payload, Printify response) |
+| 2026-07-08 | — | `printify/get-products-by-designer-email/route.ts` | Fixed a pre-existing type error that broke `next build` entirely: Prisma Accelerate's `$extends` client drops relation fields from `findMany` select-result types even though the runtime data is correct. Extracted the `select` object with `satisfies Prisma.ProductSelect` and annotated the result with `Prisma.ProductGetPayload<...>` |

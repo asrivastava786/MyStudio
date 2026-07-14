@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useDesignerStore } from "@/lib/designerStore";
-import { PRODUCT_TEMPLATES } from "@/lib/productTemplates";
+import { useCatalogTemplates } from "@/lib/useCatalogTemplates";
 
 type PublishResult = { id: string; ok: boolean; msg: string };
 
@@ -10,6 +10,7 @@ export default function CreateProductTab() {
   const queue = useDesignerStore((s) => s.queue);
   const removeFromQueue = useDesignerStore((s) => s.removeFromQueue);
   const updateQueueItem = useDesignerStore((s) => s.updateQueueItem);
+  const { templates } = useCatalogTemplates();
 
   const [publishing, setPublishing] = useState(false);
   const [results, setResults] = useState<PublishResult[]>([]);
@@ -31,7 +32,7 @@ export default function CreateProductTab() {
         continue;
       }
 
-      const template = PRODUCT_TEMPLATES.find((t) => t.id === item.productId);
+      const template = templates.find((t) => t.id === item.productId);
 
       try {
         const res = await fetch("/api/printify/create-product", {
@@ -121,7 +122,7 @@ export default function CreateProductTab() {
 
       <div className="space-y-3">
         {queue.map((item) => {
-          const template = PRODUCT_TEMPLATES.find((t) => t.id === item.productId);
+          const template = templates.find((t) => t.id === item.productId);
           const result = results.find((r) => r.id === item.id);
 
           return (

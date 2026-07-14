@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { PrismaClient } from "@prisma/client";
 import Google from "next-auth/providers/google";
 import Nodemailer from "next-auth/providers/nodemailer";
 import Credentials from "next-auth/providers/credentials";
@@ -23,7 +24,10 @@ declare module "next-auth" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(db as any),
+  // `db` is a Prisma Accelerate-extended client; its type doesn't structurally
+  // match PrismaClient even though it implements the same delegate methods
+  // PrismaAdapter actually calls at runtime.
+  adapter: PrismaAdapter(db as unknown as PrismaClient),
   session: { strategy: "jwt" },
 
   providers: [

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Stage, Layer, Rect, Image as KImage, Transformer } from "react-konva";
 import useImage from "use-image";
 import { useDesignerStore, type QueueItem } from "@/lib/designerStore";
-import { PRODUCT_TEMPLATES, type PrintZone, type ProductTemplate } from "@/lib/productTemplates";
+import type { PrintZone, ProductTemplate } from "@/lib/productTemplates";
+import { useCatalogTemplates } from "@/lib/useCatalogTemplates";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -99,15 +100,30 @@ async function buildCompositeThumb(
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
+const FALLBACK_PRODUCT: ProductTemplate = {
+  id: "",
+  name: "",
+  mockupUrl: "",
+  canvasW: 800,
+  canvasH: 1000,
+  zones: [],
+  blueprintId: 0,
+  printProviderId: 0,
+  defaultVariants: [],
+};
+
 export default function ProductDesignerRK() {
+  // ── Catalog (admin-curated Printify products) ─────────────────────────────
+  const { templates, loading: loadingTemplates, error: templatesError } = useCatalogTemplates();
+
   // ── Selection ───────────────────────────────────────────────────────────────
   const [productIdx, setProductIdx] = useState(0);
-  const product = PRODUCT_TEMPLATES[productIdx];
-  const [zone, setZone] = useState<PrintZone>(product.zones[0]);
+  const product = templates[productIdx];
+  const [zone, setZone] = useState<PrintZone | null>(null);
 
   useEffect(() => {
-    setZone(PRODUCT_TEMPLATES[productIdx].zones[0]);
-  }, [productIdx]);
+    setZone(templates[productIdx]?.zones[0] ?? null);
+  }, [productIdx, templates]);
 
   // ── Store ───────────────────────────────────────────────────────────────────
   const setSharedUrl = useDesignerStore((s) => s.setCloudinaryUrl);
@@ -134,13 +150,13 @@ export default function ProductDesignerRK() {
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !product) return;
     const update = (w: number) => setScale(w / product.canvasW);
     update(el.getBoundingClientRect().width);
     const ro = new ResizeObserver((e) => update(e[0].contentRect.width));
     ro.observe(el);
     return () => ro.disconnect();
-  }, [product.canvasW]);
+  }, [product]);
 
   // ── Transformer sync ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -152,7 +168,7 @@ export default function ProductDesignerRK() {
 
   // ── Refit when zone changes ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!artUrl) return;
+    if (!artUrl || !zone) return;
     setArt(artFitToZone(zone));
     setIsSelected(false);
   }, [zone, artUrl]);
@@ -217,7 +233,7 @@ export default function ProductDesignerRK() {
       setArtUrl(cloudJson.url);
       setSharedUrl(cloudJson.url);
       setPrintifyId(printifyJson.image.id);
-      setArt(artFitToZone(zone));
+      if (zone) setArt(artFitToZone(zone));
       setIsSelected(true);
     } catch (err: any) {
       setUploadError(err?.message ?? "Upload failed. Please try again.");
@@ -231,13 +247,16 @@ export default function ProductDesignerRK() {
   // ─────────────────────────────────────────────────────────────────────────
 
   const keepInZone = useCallback(
-    (pos: ArtPos): ArtPos => ({
-      x: clamp(pos.x, zone.x, zone.x + zone.w - pos.width),
-      y: clamp(pos.y, zone.y, zone.y + zone.h - pos.height),
-      width: clamp(pos.width, 20, zone.w),
-      height: clamp(pos.height, 20, zone.h),
-      rotation: pos.rotation ?? 0,
-    }),
+    (pos: ArtPos): ArtPos => {
+      if (!zone) return pos;
+      return {
+        x: clamp(pos.x, zone.x, zone.x + zone.w - pos.width),
+        y: clamp(pos.y, zone.y, zone.y + zone.h - pos.height),
+        width: clamp(pos.width, 20, zone.w),
+        height: clamp(pos.height, 20, zone.h),
+        rotation: pos.rotation ?? 0,
+      };
+    },
     [zone]
   );
 
@@ -278,7 +297,7 @@ export default function ProductDesignerRK() {
   // ─────────────────────────────────────────────────────────────────────────
 
   const onAddToQueue = useCallback(async () => {
-    if (!art || !currentPrintifyId || !artUrl) return;
+    if (!art || !currentPrintifyId || !artUrl || !product || !zone) return;
 
     setQueueStatus("adding");
 
@@ -325,12 +344,44 @@ export default function ProductDesignerRK() {
   // Derived values
   // ─────────────────────────────────────────────────────────────────────────
 
-  const { canvasW, canvasH, mockupUrl, overlayUrl, blendMode } = product;
+  const { canvasW, canvasH, mockupUrl, overlayUrl, blendMode } = product ?? FALLBACK_PRODUCT;
   const canQueueAdd = !!art && !!currentPrintifyId && !loading && queueStatus !== "adding";
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────────────────────────────────
+
+  if (loadingTemplates) {
+    return (
+      <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-10 text-center text-sm text-white/40">
+        Loading products…
+      </div>
+    );
+  }
+
+  if (templatesError) {
+    return (
+      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-10 text-center text-sm text-red-300">
+        Couldn&apos;t load products: {templatesError}
+      </div>
+    );
+  }
+
+  if (!templates.length || !product) {
+    return (
+      <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-10 text-center text-sm text-white/40">
+        No products available yet. An admin needs to add products from the Printify catalog first.
+      </div>
+    );
+  }
+
+  if (!zone) {
+    return (
+      <div className="rounded-2xl border border-white/8 bg-[#0d0d0d] p-10 text-center text-sm text-white/40">
+        Loading products…
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -343,7 +394,7 @@ export default function ProductDesignerRK() {
         className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1"
         style={{ scrollbarWidth: "none" } as React.CSSProperties}
       >
-        {PRODUCT_TEMPLATES.map((p, i) => (
+        {templates.map((p, i) => (
           <button
             key={p.id}
             type="button"

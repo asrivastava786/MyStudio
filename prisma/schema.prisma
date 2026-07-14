@@ -288,6 +288,30 @@ enum Role {
   ADMIN
 }
 
+/// Admin-curated product available to designers in the "Create Product" flow.
+/// blueprintId/printProviderId/variant ids come from Printify's own catalog —
+/// picked once by an admin rather than hand-typed guesses.
+model CatalogTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  blueprintId     Int
+  printProviderId Int
+  mockupUrl       String
+  overlayUrl      String?
+  blendMode       String   @default("multiply")
+  canvasW         Int
+  canvasH         Int
+  /// PrintZone[] — [{ id, label, x, y, w, h }]
+  zones           Json
+  defaultVariants Int[]
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([active])
+  @@map("catalog_templates")
+}
+
 /// Product created by designer and sent to Printify
 /// ---------- Enums ----------
 enum Position {

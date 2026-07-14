@@ -11,8 +11,9 @@ Query last N orders (paginated) and filter line items by product tag/metafield.
 For production: use date range params (?from=YYYY-MM-DD&to=YYYY-MM-DD) and paginate.
 */
 const QUERY = `
-query Orders($first: Int!, $query: String) {
-  orders(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
+query Orders($first: Int!, $after: String, $query: String) {
+  orders(first: $first, after: $after, query: $query, sortKey: CREATED_AT, reverse: true) {
+    pageInfo { hasNextPage endCursor }
     edges {
       node {
         id
@@ -38,6 +39,9 @@ query Orders($first: Int!, $query: String) {
 }
 `;
 
+const PAGE_SIZE = 50;
+const MAX_PAGES = 20; // cap at 1000 orders per request to bound worst-case latency
+
 export async function GET(req: NextRequest) {
   // const session = await getServerSession(authOptions);
   const session = await auth();
@@ -56,6 +60,7 @@ export async function GET(req: NextRequest) {
 
   type ShopifyResp = {
     orders: {
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
       edges: Array<{
         node: {
           id: string; name: string; createdAt: string;
@@ -71,7 +76,14 @@ export async function GET(req: NextRequest) {
     }
   };
 
-  const data = await shopifyGraphQL<ShopifyResp>(QUERY, { first: 50, query: q });
+  const orderEdges: ShopifyResp["orders"]["edges"] = [];
+  let after: string | null = null;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const data: ShopifyResp = await shopifyGraphQL<ShopifyResp>(QUERY, { first: PAGE_SIZE, after, query: q });
+    orderEdges.push(...data.orders.edges);
+    if (!data.orders.pageInfo.hasNextPage) break;
+    after = data.orders.pageInfo.endCursor;
+  }
 
   // Filter by tag artist:handle or metafield match
   const rows: Array<{
@@ -86,7 +98,7 @@ export async function GET(req: NextRequest) {
   let totalQty = 0;
   let totalGross = 0;
 
-  for (const e of data.orders.edges) {
+  for (const e of orderEdges) {
     const order = e.node;
     for (const le of order.lineItems.edges) {
       const li = le.node;

@@ -4,6 +4,7 @@ import SalesTab from "./sales-tab";
 import CreateProductTab from "./create-product-tab";
 import Mydesign from "./myDesign";
 import ProductDesignerClient from "./ProductDesignerClient";
+import AdminCatalogTab from "./admin-catalog-tab";
 import { auth } from "@/lib/auth";
 
 export const revalidate = 0;
@@ -82,7 +83,7 @@ export default async function Dashboard() {
         </div>
 
         {/* ── Tabs ── */}
-        <Tabs email={email} />
+        <Tabs email={email} isAdmin={session.user.role === "ADMIN"} />
       </div>
     </main>
   );
@@ -92,12 +93,13 @@ export default async function Dashboard() {
 /* Tabs                                                     */
 /* ─────────────────────────────────────────────────────── */
 
-function Tabs({ email }: { email: string }) {
+function Tabs({ email, isAdmin }: { email: string; isAdmin: boolean }) {
   const tabs = [
     { id: "tab-profile",  peer: "profile",  label: "Profile" },
     { id: "tab-sales",    peer: "sales",    label: "Sales" },
     { id: "tab-create",   peer: "create",   label: "Create Product" },
     { id: "tab-my",       peer: "my",       label: "My Designs" },
+    ...(isAdmin ? [{ id: "tab-catalog", peer: "catalog", label: "Catalog" }] : []),
   ];
 
   return (
@@ -107,6 +109,9 @@ function Tabs({ email }: { email: string }) {
       <input id="tab-sales"    name="dashTabs" type="radio" className="peer/sales hidden" />
       <input id="tab-create"   name="dashTabs" type="radio" className="peer/create hidden" />
       <input id="tab-my"       name="dashTabs" type="radio" className="peer/my hidden" />
+      {isAdmin && (
+        <input id="tab-catalog" name="dashTabs" type="radio" className="peer/catalog hidden" />
+      )}
 
       {/* Tab bar */}
       <nav className="flex flex-wrap gap-1.5 p-1.5 rounded-2xl bg-white/[0.04] border border-white/8 backdrop-blur w-fit">
@@ -158,6 +163,14 @@ function Tabs({ email }: { email: string }) {
           <Mydesign />
         </Panel>
       </section>
+
+      {isAdmin && (
+        <section className="hidden peer-checked/catalog:block">
+          <Panel>
+            <AdminCatalogTab />
+          </Panel>
+        </section>
+      )}
     </div>
   );
 }

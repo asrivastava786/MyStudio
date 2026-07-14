@@ -6,10 +6,9 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 
-// TODO: Verify correct print-quality minimums with Printify spec (original values: 5907×5309 px).
-// Current values are too low for print and will accept thumbnail-sized images.
-const MIN_W = 590;
-const MIN_H = 530;
+// Printify print-quality minimums (300 DPI at typical print sizes).
+const MIN_W = 5907;
+const MIN_H = 5309;
 const MAX_SIDE = 30000;
 
 

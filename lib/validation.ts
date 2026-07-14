@@ -29,3 +29,31 @@ export const RegisterSchema = z.object({
     .regex(passwordRegex, "Hasło min. 8 znaków, musi zawierać literę i cyfrę"),
 });
 export type RegisterInput = z.infer<typeof RegisterSchema>;
+
+const PrintZoneSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  x: z.number(),
+  y: z.number(),
+  w: z.number().positive(),
+  h: z.number().positive(),
+});
+
+export const CatalogTemplateSchema = z.object({
+  name: z.string().min(1).max(100),
+  blueprintId: z.number().int().positive(),
+  printProviderId: z.number().int().positive(),
+  mockupUrl: z.string().url(),
+  overlayUrl: z
+    .string()
+    .url()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  blendMode: z.enum(["normal", "multiply", "screen", "overlay"]).default("multiply"),
+  canvasW: z.number().int().positive(),
+  canvasH: z.number().int().positive(),
+  zones: z.array(PrintZoneSchema).min(1),
+  defaultVariants: z.array(z.number().int().positive()).min(1),
+  active: z.boolean().optional().default(true),
+});
+export type CatalogTemplateInput = z.infer<typeof CatalogTemplateSchema>;
