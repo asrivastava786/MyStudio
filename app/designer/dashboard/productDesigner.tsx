@@ -146,10 +146,12 @@ export default function ProductDesignerRK() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // ── Responsive scale ────────────────────────────────────────────────────────
-  // Fit the canvas within both the container width AND a viewport-height
-  // budget — a tall/high-res mockup photo shouldn't force the page to
-  // scroll just to see the whole product.
+  // Every product renders inside the same fixed-size box (full container
+  // width × a viewport-height budget) and is letterboxed (contain-fit +
+  // centered) inside it — so switching products never changes the size of
+  // the canvas itself, only how much of the box the mockup fills.
   const [scale, setScale] = useState(1);
+  const [boxSize, setBoxSize] = useState({ w: 0, h: 0 });
   const MAX_CANVAS_VH = 0.62;
 
   useEffect(() => {
@@ -160,6 +162,7 @@ export default function ProductDesignerRK() {
       const widthScale = w / product.canvasW;
       const heightScale = maxHeight / product.canvasH;
       setScale(Math.min(widthScale, heightScale));
+      setBoxSize({ w, h: maxHeight });
     };
     const onWindowResize = () => update(el.getBoundingClientRect().width);
     update(el.getBoundingClientRect().width);
@@ -563,11 +566,14 @@ export default function ProductDesignerRK() {
       )}
 
       {/* ── 3-Layer sandwich canvas ───────────────────────────────────────── */}
-      <div ref={containerRef} className="w-full flex justify-center">
-        {/* Sized to fit both container width and a viewport-height budget,
-            then centered — never forces the page to scroll to see it all. */}
+      {/* Fixed box (same size for every product) — content is contain-fit
+          and centered inside it, so switching products never resizes the box. */}
+      <div
+        ref={containerRef}
+        className="w-full rounded-2xl overflow-hidden border border-white/8 bg-[#0d0d0d] flex items-center justify-center"
+        style={{ height: boxSize.h }}
+      >
         <div
-          className="rounded-2xl overflow-hidden border border-white/8 bg-[#0d0d0d]"
           style={{ width: canvasW * scale, height: canvasH * scale, position: "relative" }}
         >
           {/* ── Layer 1: product background ── */}
